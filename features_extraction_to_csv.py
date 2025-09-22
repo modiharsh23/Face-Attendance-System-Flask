@@ -1,5 +1,3 @@
-# Extract features from images and save into "features_all.csv"
-
 import os
 import dlib
 import csv
@@ -7,22 +5,21 @@ import numpy as np
 import logging
 import cv2
 
-#  Path of cropped faces
+# Path of cropped faces
 path_images_from_camera = "data/data_faces_from_camera/"
 
-#  Use frontal face detector of Dlib
+# Use frontal face detector of Dlib
 detector = dlib.get_frontal_face_detector()
 
-#  Get face landmarks
+# Get face landmarks
 predictor = dlib.shape_predictor('data/data_dlib/shape_predictor_68_face_landmarks.dat')
 
-#  Use Dlib resnet50 model to get 128D face descriptor
+# Use Dlib resnet50 model to get 128D face descriptor
 face_reco_model = dlib.face_recognition_model_v1("data/data_dlib/dlib_face_recognition_resnet_model_v1.dat")
 
 
-#  Return 128D features for single image
-
 def return_128d_features(path_img):
+    """ Return 128D features for a single image """
     img_rd = cv2.imread(path_img)
     faces = detector(img_rd, 1)
 
@@ -38,25 +35,22 @@ def return_128d_features(path_img):
     return face_descriptor
 
 
-#   Return the mean value of 128D face descriptor for person X
-
 def return_features_mean_personX(path_face_personX):
+    """ Return the mean value of 128D face descriptor for person X """
     features_list_personX = []
     photos_list = os.listdir(path_face_personX)
     if photos_list:
         for i in range(len(photos_list)):
-            #  return_128d_features()  128D  / Get 128D features for single image of personX
             logging.info("%-40s %-20s", " / Reading image:", path_face_personX + "/" + photos_list[i])
             features_128d = return_128d_features(path_face_personX + "/" + photos_list[i])
-            #  Jump if no face detected from image
+            # Jump if no face detected from image
             if features_128d == 0:
-                i += 1
+                continue
             else:
                 features_list_personX.append(features_128d)
     else:
-        logging.warning(" Warning: No images in%s/", path_face_personX)
+        logging.warning(" Warning: No images in %s/", path_face_personX)
 
-   
     if features_list_personX:
         features_mean_personX = np.array(features_list_personX, dtype=object).mean(axis=0)
     else:
@@ -64,17 +58,24 @@ def return_features_mean_personX(path_face_personX):
     return features_mean_personX
 
 
+# <<<<<<<<<<<<<<<<<<<<<<<< MODIFIED FUNCTION HERE <<<<<<<<<<<<<<<<<<<<<<<<
 def main():
     logging.basicConfig(level=logging.INFO)
-    #  Get the order of latest person
+    # Get the list of all items (files and folders) in the directory
     person_list = os.listdir("data/data_faces_from_camera/")
     person_list.sort()
 
     with open("data/features_all.csv", "w", newline="") as csvfile:
         writer = csv.writer(csvfile)
         for person in person_list:
-            # Get the mean/average features of face/personX, it will be a list with a length of 128D
-            logging.info("%sperson_%s", path_images_from_camera, person)
+            # THIS IS THE FIX:
+            # If the item name doesn't start with "person_", skip to the next item.
+            # This prevents the code from trying to process ".DS_Store".
+            if not person.startswith("person_"):
+                continue
+
+            # Get the mean/average features of face/personX
+            logging.info("%s%s", path_images_from_camera, person)
             features_mean_personX = return_features_mean_personX(path_images_from_camera + person)
 
             if len(person.split('_', 2)) == 2:
@@ -83,11 +84,12 @@ def main():
             else:
                 # "person_x_tom"
                 person_name = person.split('_', 2)[-1]
+            
             features_mean_personX = np.insert(features_mean_personX, 0, person_name, axis=0)
-            # features_mean_personX will be 129D, person name + 128 features
             writer.writerow(features_mean_personX)
             logging.info('\n')
         logging.info("Save all the features of faces registered into: data/features_all.csv")
+# <<<<<<<<<<<<<<<<<<<<<<<< END OF MODIFIED FUNCTION <<<<<<<<<<<<<<<<<<<<<<<<
 
 
 if __name__ == '__main__':
