@@ -1,0 +1,23 @@
+# Database
+*.db
+attendance.db
+
+# CSV files with personal data
+features_all.csv
+
+# Data folders
+data_faces_from_camera/
+data_dlib/
+
+# Python virtual environment
+venv/
+env/
+*.env
+
+# Python cache
+__pycache__/
+*.pyc
+
+# IDE specific files
+.vscode/
+.idea/
